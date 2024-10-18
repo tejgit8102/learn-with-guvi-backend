@@ -6,30 +6,31 @@ const dotenv = require("dotenv").config();
 const URL = process.env.DB;
 
 const DB_NAME = "movie_db";
-const COLLECTION_NAME = "movies";
 
+const COLLECTION_NAME = "movies";
 app.use(
   cors({
     origin: "*",
   })
 );
 
-let db, collection;
-
-// Connect to MongoDB once when the server starts
-const client = new MongoClient(URL, {});
-client.connect().then(() => {
-  db = client.db(DB_NAME);
-  collection = db.collection(COLLECTION_NAME);
-  console.log("Connected to MongoDB");
-}).catch((error) => {
-  console.log("Error connecting to MongoDB", error);
-});
-
 app.get("/movie/get-movies", async (req, res) => {
   try {
-    // Step 4. Fetch all movies from the collection
+    // Step 1. Connect the Database
+    const client = new MongoClient(URL, {}).connect();
+
+    // Step 2. Select the DB
+    let db = (await client).db(DB_NAME);
+
+    // Step 3. Select the Collection
+    let collection = await db.collection(COLLECTION_NAME);
+
+    // Step 4. Do the operation
     let movies = await collection.find({}).toArray();
+
+    // Step 5. Close the connection
+    (await client).close();
+
     res.json(movies);
   } catch (error) {
     console.log(error);
@@ -40,8 +41,20 @@ app.get("/movie/get-movies", async (req, res) => {
 app.get("/movie/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    // Fetch a single movie by its ID
-    let movie = await collection.findOne({ _id: new ObjectId(id) });
+
+    // Step 1. Connect the Database
+    const client = new MongoClient(URL, {}).connect();
+
+    // Step 2. Select the DB
+    let db = (await client).db(DB_NAME);
+
+    // Step 3. Select the Collection
+    let dbcollection = await db.collection(COLLECTION_NAME);
+
+    let movie = await dbcollection.findOne({ _id: new ObjectId(id) });
+
+    (await client).close();
+
     res.json(movie);
   } catch (error) {
     console.log(error);
@@ -49,10 +62,6 @@ app.get("/movie/:id", async (req, res) => {
   }
 });
 
-app.post("/book-ticket", (req, res) => {
-  // Logic for booking a ticket can go here
-});
+app.post("/book-ticket", (req, res) => {});
 
-app.listen(8000, () => {
-  console.log("Server is running on port 8000");
-});
+app.listen(8000);
